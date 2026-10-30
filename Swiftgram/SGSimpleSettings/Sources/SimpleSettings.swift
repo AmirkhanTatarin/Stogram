@@ -352,7 +352,7 @@ public class SGSimpleSettings {
         Keys.novaUnlockProtected.rawValue: true,
         Keys.novaWhisper.rawValue: true,
         Keys.novaHQVideo.rawValue: true,
-        Keys.stogramProxyAuto.rawValue: true,
+        Keys.stogramProxyAuto.rawValue: false,
         Keys.stogramTemplates.rawValue: ["Привет! Сейчас не могу, напишу позже.", "Скинь, пожалуйста, подробнее.", "Окей, договорились 👍", "Спасибо!"],
         Keys.stogramPeerNotes.rawValue: [:],
         Keys.stogramSendWhenOnline.rawValue: [:],
