@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 360
 
     steps:
@@ -18,7 +18,11 @@ jobs:
         run: |
           XCODE_VERSION=$(python3 -c 'import json;print(json.load(open("versions.json"))["xcode"])')
           ls -d /Applications/Xcode*
-          sudo xcode-select -s /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer
+          XC=/Applications/Xcode_$XCODE_VERSION.app
+          # на образе может не быть точной версии из versions.json — берём самую новую той же мажорной
+          [ -d "$XC" ] || XC=$(ls -d /Applications/Xcode_${XCODE_VERSION%%.*}*.app | sort -V | tail -1)
+          echo "Xcode: $XC"
+          sudo xcode-select -s $XC/Contents/Developer
           xcodebuild -version
           df -h /
 
