@@ -39,10 +39,14 @@ final class NovaProxyManager {
         self.timer = timer
         timer.start()
         self.activeObserver = NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main, using: { [weak self] _ in
-            guard let self, CFAbsoluteTimeGetCurrent() - self.lastMeasure > 5.0 * 60.0 else {
+            guard let self else {
                 return
             }
-            self.measure()
+            let vpn = NovaProxyManager.isVPNActive()
+            if vpn != self.lastVPNState || CFAbsoluteTimeGetCurrent() - self.lastMeasure > 5.0 * 60.0 {
+                self.lastVPNState = vpn
+                self.measure()
+            }
         })
         self.connectionDisposable = (context.account.network.connectionStatus
         |> deliverOnMainQueue).start(next: { [weak self] status in
@@ -87,6 +91,7 @@ final class NovaProxyManager {
 
     private var lastListRefresh: Double = 0.0
     private var lastMeasure: Double = 0.0
+    private var lastVPNState: Bool = false
     private var connectionDisposable: Disposable?
     private var stuckTimer: SwiftSignalKit.Timer?
 
@@ -125,11 +130,33 @@ final class NovaProxyManager {
         }))
     }
 
+    /// A system VPN is on (utun/ipsec/ppp interface): Telegram works directly, and public proxies only get in the way
+    /// (they often pass messages but not photos, themes and wallpapers).
+    static func isVPNActive() -> Bool {
+        guard let settings = CFNetworkCopySystemProxySettings()?.takeRetainedValue() as? [String: Any],
+              let scoped = settings["__SCOPED__"] as? [String: Any] else {
+            return false
+        }
+        return scoped.keys.contains(where: { $0.hasPrefix("utun") || $0.hasPrefix("ipsec") || $0.hasPrefix("ppp") || $0.hasPrefix("tap") || $0.hasPrefix("tun") })
+    }
+
     private func apply(_ values: [ProxyServerSettings: ProxyServerStatus]) {
         guard SGSimpleSettings.shared.stogramProxyAuto else {
             return
         }
         let settings = self.settings
+        if NovaProxyManager.isVPNActive() {
+            // Stogram: with a VPN our proxy is switched off, so media and themes load at full speed.
+            if settings.enabled, let active = settings.activeServer, self.isOurs(active) {
+                let _ = updateProxySettingsInteractively(accountManager: self.context.sharedContext.accountManager, { settings in
+                    var settings = settings
+                    settings.enabled = false
+                    return settings
+                }).start()
+            }
+            let _ = StogramProxy.current.swap(StogramProxy.Status(host: "VPN", ping: nil))
+            return
+        }
         // The user's own proxy wins: leave it alone.
         if settings.enabled, let active = settings.activeServer, !self.isOurs(active) {
             return

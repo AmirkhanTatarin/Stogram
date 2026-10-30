@@ -189,6 +189,7 @@ public class SGSimpleSettings {
         case duckyAppIconAvailable
         case transcriptionBackend
         case translationBackend
+        case translatorLogsExpiration
         case customAppBadge
         case canUseNY
         case nyStyle
@@ -198,6 +199,8 @@ public class SGSimpleSettings {
         case warnOnStoriesOpen
         case showProfileId
         case sendWithReturnKey
+        case videoControlsInFooter
+        case hideAccountInNotifications
     }
     
     public enum DownloadSpeedBoostValues: String, CaseIterable {
@@ -364,6 +367,7 @@ public class SGSimpleSettings {
         Keys.duckyAppIconAvailable.rawValue: true,
         Keys.transcriptionBackend.rawValue: TranscriptionBackend.default.rawValue,
         Keys.translationBackend.rawValue: TranslationBackend.default.rawValue,
+        Keys.translatorLogsExpiration.rawValue: 0.0,
         Keys.customAppBadge.rawValue: "",
         Keys.canUseNY.rawValue: false,
         Keys.nyStyle.rawValue: NYStyle.default.rawValue,
@@ -372,7 +376,8 @@ public class SGSimpleSettings {
         Keys.hideStories.rawValue: false,
         Keys.warnOnStoriesOpen.rawValue: false,
         Keys.showProfileId.rawValue: true,
-        Keys.sendWithReturnKey.rawValue: false
+        Keys.sendWithReturnKey.rawValue: false,
+        Keys.videoControlsInFooter.rawValue: false,
     ]
     
     public static let groupDefaultValues: [String: Any] = [
@@ -381,6 +386,7 @@ public class SGSimpleSettings {
         Keys.mentionsAndRepliesNotifications.rawValue: MentionsAndRepliesNotificationsSettings.default.rawValue,
         Keys.status.rawValue: 1,
         Keys.showRepostToStoryV2.rawValue: true,
+        Keys.hideAccountInNotifications.rawValue: false,
     ]
     
     @UserDefault(key: Keys.hidePhoneInSettings.rawValue)
@@ -702,6 +708,23 @@ public class SGSimpleSettings {
     @UserDefault(key: Keys.translationBackend.rawValue)
     public var translationBackend: String
 
+    @UserDefault(key: Keys.translatorLogsExpiration.rawValue)
+    private var translatorLogsExpiration: Double
+
+    public var translatorLogsEnabled: Bool {
+        if self.translatorLogsExpiration > Date().timeIntervalSince1970 {
+            return true
+        }
+        if self.translatorLogsExpiration != 0.0 {
+            self.translatorLogsExpiration = 0.0
+        }
+        return false
+    }
+
+    public func setTranslatorLogsEnabled(_ enabled: Bool) {
+        self.translatorLogsExpiration = enabled ? Date().addingTimeInterval(24.0 * 60.0 * 60.0).timeIntervalSince1970 : 0.0
+    }
+
     @UserDefault(key: Keys.customAppBadge.rawValue)
     public var customAppBadge: String
 
@@ -716,6 +739,12 @@ public class SGSimpleSettings {
     
     @UserDefault(key: Keys.tabBarSearchEnabled.rawValue)
     public var tabBarSearchEnabled: Bool
+
+    @UserDefault(key: Keys.videoControlsInFooter.rawValue)
+    public var videoControlsInFooter: Bool
+
+    @UserDefault(key: Keys.hideAccountInNotifications.rawValue, userDefaults: UserDefaults(suiteName: APP_GROUP_IDENTIFIER) ?? .standard)
+    public var hideAccountInNotifications: Bool
 }
 
 extension SGSimpleSettings {
